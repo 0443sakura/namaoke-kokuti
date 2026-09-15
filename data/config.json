@@ -4,7 +4,7 @@
     "image_base_url は、GitHub にこのフォルダを置いたあとの公開URLに書き換えてください。",
     "（セットアップ手順.md の 3 に、そのやり方が書いてあります）"
   ],
-  "image_base_url": "https://raw.githubusercontent.com/sakura443443/namaoke-kokuti/main/images",
+  "image_base_url": "https://raw.githubusercontent.com/0443sakura/namaoke-kokuti/main/images",
   "images": {
     "feed": [
       "feed-1.jpg",
