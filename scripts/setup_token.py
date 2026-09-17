@@ -185,7 +185,18 @@ def main():
             return
         print(f"\n登録できませんでした（{error}）")
         print("下の値を、GitHub の画面から手で貼ってください。")
+        show(secrets)
+        print("\nMETA_PLACE_ID は scripts/find_location.py を動かすと出ます。")
+        return
 
+    # y 以外が入ったときに、うっかり鍵を画面に出さないようにします。
+    # 打ち間違いや、関係ない文字が入っただけで表に出ると、取り消せません。
+    print("\n登録していません。")
+    print("値を自分で GitHub に貼るなら、画面に出します。")
+    print("★ ここで出すと、画面の記録に残ります。人に見せない場所で行ってください。")
+    if ask("出しますか？　show と打って Enter", secret=False).strip().lower() != "show":
+        print("\n出しませんでした。もう一度 python3 scripts/setup_token.py からどうぞ。")
+        return
     show(secrets)
     print("\nMETA_PLACE_ID は scripts/find_location.py を動かすと出ます。")
 
