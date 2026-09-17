@@ -1,0 +1,27 @@
+name: 手で動かす お店の場所IDを調べる
+
+# はじめの一回だけ使う道具です。決まった時刻には動きません。
+# 位置情報（META_PLACE_ID）を探して、記録に表示します。
+#
+# トークンを手元に出さずに済ませるため、ここで動かします。
+# （手元で動かす場合は README のとおり scripts/find_location.py です）
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read            # 非公開リポジトリを読み出すため
+
+jobs:
+  location:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: お店の場所を探す
+        env:
+          META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+        run: python3 scripts/find_location.py
