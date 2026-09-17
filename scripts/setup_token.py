@@ -16,6 +16,7 @@ Facebook ページのID と Instagram のID もまとめて調べます。
 """
 
 import getpass
+import json
 import pathlib
 import shutil
 import subprocess
@@ -25,6 +26,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import meta_api  # noqa: E402
 
 REPO = "0443sakura/namaoke-kokuti"
+ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
 def ask(label, secret=True):
@@ -32,6 +34,15 @@ def ask(label, secret=True):
     if not value:
         raise SystemExit(f"{label} が空でした。やり直してください。")
     return value
+
+
+def known_app_id():
+    """アプリIDは秘密ではないので、data/config.json に書いてあります。"""
+    try:
+        cfg = json.loads((ROOT / "data" / "config.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    return str(cfg.get("meta_app_id", "")).strip()
 
 
 def ask_secret():
@@ -90,7 +101,11 @@ def main():
     print(__doc__)
     if "--help" in sys.argv or "-h" in sys.argv:
         return  # 説明だけ読みたいときは、ここで終わります
-    app_id = ask("アプリID（数字）", secret=False)
+    app_id = known_app_id()
+    if app_id:
+        print(f"アプリID: {app_id}（data/config.json に書いてあるものを使います）")
+    else:
+        app_id = ask("アプリID（数字）", secret=False)
     app_secret = ask_secret()
     short_token = ask("ユーザーアクセストークン（打っても画面には出ません）")
 
