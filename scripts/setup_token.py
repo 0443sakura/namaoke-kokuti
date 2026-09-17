@@ -34,6 +34,19 @@ def ask(label, secret=True):
     return value
 
 
+def ask_secret():
+    """アプリシークレットを聞きます。見るからに違うときは、その場で言います。"""
+    while True:
+        value = ask("アプリシークレット（打っても画面には出ません）")
+        if len(value) == 32 and all(c in "0123456789abcdef" for c in value.lower()):
+            return value
+        print("  ⚠ 32桁の英数字ではありませんでした。貼り間違いかもしれません。")
+        print("    そのままでよければ、もう一度同じものを貼ってください。")
+        again = ask("アプリシークレット（もう一度）")
+        if again == value:
+            return value
+
+
 def repo_name():
     """origin の URL から「持ち主/名前」を取り出します。分からなければ既定値です。"""
     try:
@@ -78,16 +91,35 @@ def main():
     if "--help" in sys.argv or "-h" in sys.argv:
         return  # 説明だけ読みたいときは、ここで終わります
     app_id = ask("アプリID（数字）", secret=False)
-    app_secret = ask("アプリシークレット（打っても画面には出ません）")
+    app_secret = ask_secret()
     short_token = ask("ユーザーアクセストークン（打っても画面には出ません）")
 
     print("\n1) 期限のない長いトークンに交換しています…")
-    long_user = meta_api.get("oauth/access_token", {
-        "grant_type": "fb_exchange_token",
-        "client_id": app_id,
-        "client_secret": app_secret,
-        "fb_exchange_token": short_token,
-    }, short_token)["access_token"]
+    # 貼り間違いはよく起きます。最初からやり直さずに、違うものだけ聞き直します。
+    while True:
+        try:
+            long_user = meta_api.get("oauth/access_token", {
+                "grant_type": "fb_exchange_token",
+                "client_id": app_id,
+                "client_secret": app_secret,
+                "fb_exchange_token": short_token,
+            }, short_token)["access_token"]
+            break
+        except meta_api.GraphError as e:
+            detail = str(e.detail)
+            print(f"\n  ❌ {detail}")
+            if "secret" in detail.lower():
+                print("  アプリシークレットが違うようです。")
+                print("  「表示」を押して、隠れていない状態の文字列をコピーしてください。")
+                print("  （`••••••••` のまま貼ると、これが出ます）")
+                app_secret = ask_secret()
+            elif "client id" in detail.lower():
+                print("  アプリIDが違うようです。")
+                app_id = ask("アプリID（数字）", secret=False)
+            else:
+                print("  トークンが古いか、違うようです。")
+                print("  エクスプローラの画面で取り直して、貼り直してください。")
+                short_token = ask("ユーザーアクセストークン（打っても画面には出ません）")
 
     print("2) Facebook ページを探しています…")
     pages = meta_api.get("me/accounts", {"fields": "id,name,access_token"}, long_user).get("data", [])
@@ -98,22 +130,36 @@ def main():
             "トークンを取るときに pages_show_list の許可を入れたかを確かめてください。"
         )
 
-    if len(pages) == 1:
-        page = pages[0]
-    else:
-        print("\n  どのページに投稿しますか？")
-        for i, p in enumerate(pages, 1):
-            print(f"    {i}. {p['name']}")
-        page = pages[int(ask("  番号", secret=False)) - 1]
+    # ページは複数あっても、Instagram がつながっているものしか使えません。
+    # あとで選び直さずに済むよう、ここで全部調べてしまいます。
+    print("3) それぞれにつながった Instagram を探しています…")
+    usable = []
+    for p in pages:
+        linked = meta_api.get(p["id"], {"fields": "instagram_business_account{id,username}"},
+                              p["access_token"]).get("instagram_business_account")
+        mark = f"@{linked['username']}" if linked else "Instagram がつながっていません"
+        print(f"    ・{p['name']}　… {mark}")
+        if linked:
+            usable.append((p, linked))
 
-    print(f"3) 「{page['name']}」につながった Instagram を探しています…")
-    linked = meta_api.get(page["id"], {"fields": "instagram_business_account{id,username}"},
-                          page["access_token"]).get("instagram_business_account")
-    if not linked:
+    if not usable:
         raise SystemExit(
-            f"「{page['name']}」に Instagram がつながっていません。\n"
+            "どのページにも Instagram がつながっていませんでした。\n"
             "セットアップ手順.md の 2（プロアカウントに切り替えてページと連携）を先にどうぞ。"
         )
+
+    if len(usable) == 1:
+        page, linked = usable[0]
+    else:
+        print("\n  どのページに投稿しますか？")
+        for i, (p, ig) in enumerate(usable, 1):
+            print(f"    {i}. {p['name']}　← @{ig['username']}")
+        while True:
+            answer = ask("  番号", secret=False)
+            if answer.isdigit() and 1 <= int(answer) <= len(usable):
+                page, linked = usable[int(answer) - 1]
+                break
+            print(f"  1 から {len(usable)} の番号を打ってください。")
 
     secrets = {
         "META_PAGE_ID": page["id"],

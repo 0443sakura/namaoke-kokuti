@@ -8,7 +8,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  issues: write
+  contents: read            # 非公開リポジトリを読み出すため（無いと checkout が落ちます）
+  issues: write             # 切れていたら知らせる Issue を立てるため
 
 jobs:
   health:
