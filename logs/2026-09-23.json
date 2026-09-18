@@ -1,0 +1,21 @@
+{
+  "投稿日時": "2026-09-18T02:01:49",
+  "開催日": "2026-09-23",
+  "結果": [
+    {
+      "step": "Instagram ストーリー 1枚目",
+      "ok": true,
+      "detail": "17889023475457632"
+    },
+    {
+      "step": "Instagram ストーリー 2枚目",
+      "ok": true,
+      "detail": "18100233392571214"
+    },
+    {
+      "step": "Facebook ストーリー",
+      "ok": false,
+      "detail": "(#200) The permission(s) pages_manage_posts are not available. It could because either they are deprecated or need to be approved by App Review."
+    }
+  ]
+}
