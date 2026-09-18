@@ -25,11 +25,17 @@ jobs:
         id: build
         run: python3 scripts/build_draft.py --show
 
-      - name: 下書きを記録として残す
+      # Instagram は画像を公開URLから取りに行きます。だから GitHub に置きます。
+      - name: 開催日とホスト名を焼き込んだ画像をつくる
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 scripts/make_images.py --draft "${{ steps.build.outputs.draft }}"
+
+      - name: 下書きと画像を記録として残す
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add drafts/
+          git add drafts/ images/weekly/
           git diff --staged --quiet || git commit -m "下書き ${{ steps.build.outputs.draft }}"
           git push
 

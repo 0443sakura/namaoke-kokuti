@@ -76,6 +76,8 @@ def cmd_open(draft, draft_path):
 
     cfg = json.loads((ROOT / "data" / "config.json").read_text(encoding="utf-8"))
     base = cfg["image_base_url"].rstrip("/")
+    # make_images.py が作った、その週の画像を見せます（開催日とホスト名が入っています）。
+    weekly = f"{base}/weekly/{draft['開催日']}"
     d = dt.date.fromisoformat(draft["開催日"])
     miss = draft["アカウント未登録"]["instagram"]
     tags = draft.get("user_tags") or []
@@ -109,8 +111,8 @@ def cmd_open(draft, draft_path):
 
 | フィード | ストーリー |
 |---|---|
-| <img src="{base}/feed-1.jpg" width="200"> | <img src="{base}/story-1.jpg" width="120"> |
-| <img src="{base}/feed-2.jpg" width="200"> | <img src="{base}/story-2.jpg" width="120"> |
+| <img src="{base}/feed-1.jpg" width="200"> | <img src="{weekly}/story-1.jpg" width="120"> |
+| <img src="{base}/feed-2.jpg" width="200"> | <img src="{weekly}/story-2.jpg" width="120"> |
 
 ## Instagram の本文
 

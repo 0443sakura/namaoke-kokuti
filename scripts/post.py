@@ -47,8 +47,26 @@ class Poster:
     # ── 共通の道具 ────────────────────────────────────────────
 
     def image_urls(self, kind):
+        """投稿する画像の公開URLです。
+
+        make_images.py がその週の画像を images/weekly/開催日/ に作っていれば、
+        そちらを使います（開催日とホスト名が入っています）。
+        無ければ、もとの画像に戻ります。作り忘れても投稿は止まりません。
+        """
         base = self.cfg["image_base_url"].rstrip("/")
-        return [f"{base}/{name}" for name in self.cfg["images"][kind]]
+        date = self.draft["開催日"]
+        urls = []
+        for name in self.cfg["images"][kind]:
+            if (ROOT / "images" / "weekly" / date / name).exists():
+                urls.append(f"{base}/weekly/{date}/{name}")
+            else:
+                # フィード用は、まだ日付を焼き込んでいないので、ここを通るのがふつうです。
+                # ストーリー用がここを通ったときは「本日！」のままの画像が出てしまいます。
+                if kind == "story":
+                    self.log(f"  ⚠ images/weekly/{date}/{name} がありません。"
+                             "「本日！」と書かれたままの画像が出ます。")
+                urls.append(f"{base}/{name}")
+        return urls
 
     def log(self, msg):
         print(msg, flush=True)
