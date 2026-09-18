@@ -111,7 +111,7 @@ def cmd_open(draft, draft_path):
 
 | フィード | ストーリー |
 |---|---|
-| <img src="{base}/feed-1.jpg" width="200"> | <img src="{weekly}/story-1.jpg" width="120"> |
+| <img src="{weekly}/feed-1.jpg" width="200"> | <img src="{weekly}/story-1.jpg" width="120"> |
 | <img src="{base}/feed-2.jpg" width="200"> | <img src="{weekly}/story-2.jpg" width="120"> |
 
 ## Instagram の本文

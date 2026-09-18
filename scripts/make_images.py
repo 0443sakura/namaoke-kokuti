@@ -147,21 +147,39 @@ def _story2(date):
     return im
 
 
+def _feed1(story1):
+    """フィード用の1枚目（1080x1350）。
+
+    縦が短いので、ストーリー1枚目の中身をそのまま縮めて収めます。
+    左右に薄い余白ができますが、中身は何も欠けません
+    （さくらさんが 2026-09-18 に案Aを選ばれました）。
+    ストーリーから組むので、デザインがずれることはありません。
+    """
+    src = story1.crop((0, 168, 1080, 1886))   # 見出しの上から帯の下まで
+    w = int(src.width * 1350 / src.height)
+    im = Image.new("RGB", (1080, 1350), CREAM)
+    im.paste(src.resize((w, 1350), Image.LANCZOS), ((1080 - w) // 2, 0))
+    return im
+
+
 # ── 入口 ──────────────────────────────────────────────────────
 
 def build(draft, out_dir):
     date = dt.date.fromisoformat(draft["開催日"])
     out_dir.mkdir(parents=True, exist_ok=True)
+    story1 = _story1(date, draft["メンバー"])
+
     made = []
-    for name, im in (("story-1.jpg", _story1(date, draft["メンバー"])),
-                     ("story-2.jpg", _story2(date))):
+    for name, im in (("story-1.jpg", story1),
+                     ("story-2.jpg", _story2(date)),
+                     ("feed-1.jpg", _feed1(story1))):
         path = out_dir / name
         im.save(path, quality=92)
         made.append(path)
 
-    # フィード用は、まだ日付を入れていません（上に余白がなく、同じ形にできません）。
-    # 中身が変わらないものを毎週コピーすると記録が太るので、ここには置きません。
-    # post.py は、無ければもとの images/feed-*.jpg を使います。
+    # フィード用の2枚目は、もとのままで誤解を招きません（「毎週水曜日開催！」）。
+    # 中身の変わらないものを毎週コピーすると記録が太るので、ここには置きません。
+    # post.py は、無ければもとの images/feed-2.jpg を使います。
     return made
 
 

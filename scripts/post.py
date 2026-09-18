@@ -60,9 +60,9 @@ class Poster:
             if (ROOT / "images" / "weekly" / date / name).exists():
                 urls.append(f"{base}/weekly/{date}/{name}")
             else:
-                # フィード用は、まだ日付を焼き込んでいないので、ここを通るのがふつうです。
-                # ストーリー用がここを通ったときは「本日！」のままの画像が出てしまいます。
-                if kind == "story":
+                # feed-2.jpg だけは、もとのままでよいので、ここを通るのがふつうです。
+                # ほかの画像がここを通ると「本日！」のままのものが出てしまいます。
+                if name != "feed-2.jpg":
                     self.log(f"  ⚠ images/weekly/{date}/{name} がありません。"
                              "「本日！」と書かれたままの画像が出ます。")
                 urls.append(f"{base}/{name}")
