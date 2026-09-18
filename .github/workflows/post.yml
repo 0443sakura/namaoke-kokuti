@@ -1,10 +1,17 @@
 name: 金曜11時 投稿する
 
 # GitHub の時計は世界標準時（UTC）です。日本時間から9時間引きます。
-# 金曜 11:00 JST = 金曜 02:00 UTC
+#
+# ★ 定時実行は、GitHub が混んでいると遅れます。飛ばされることもあります。
+#   2026-09-18 に実際に確かめました（木曜の分が5時間28分おくれ、金曜の分は飛びました）。
+#   毎時00分がいちばん混むので避け、時刻をずらして何回か起こしています。
+#   投稿するのは、そのうち最初の1回だけです（already_posted.py で見ています）。
 on:
   schedule:
-    - cron: "0 2 * * 5"
+    - cron: "3 2 * * 5"    # 金 11:03
+    - cron: "33 2 * * 5"   # 金 11:33
+    - cron: "7 3 * * 5"    # 金 12:07
+    - cron: "9 4 * * 5"    # 金 13:09
   workflow_dispatch:
     inputs:
       only:
@@ -48,6 +55,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 scripts/github_issue.py approval --draft "${{ steps.find.outputs.draft }}"
 
+      # 定時実行は何回か起きます。もう出した回を二度出さないための確認です。
+      # 手で動かしたときは見ません（出し直したいことがあるためです）。
+      - name: もう投稿していないか確かめる
+        id: already
+        run: python3 scripts/already_posted.py --draft "${{ steps.find.outputs.draft }}"
+
+      - name: もう投稿ずみなので、今回は出しません
+        if: github.event_name == 'schedule' && steps.already.outputs.posted == 'true'
+        run: echo "::notice::この回はもう投稿しています。二重に出さないよう、ここで終わります。"
+
       - name: 承認が無かったので、今週は投稿しません
         if: steps.approval.outputs.approved != 'true'
         run: |
@@ -56,6 +73,7 @@ jobs:
 
       - name: Instagram と Facebook に投稿する
         if: steps.approval.outputs.approved == 'true'
+          && (github.event_name != 'schedule' || steps.already.outputs.posted != 'true')
         env:
           META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
           META_PAGE_ID:    ${{ secrets.META_PAGE_ID }}
@@ -71,6 +89,7 @@ jobs:
       # 投稿を試したときは、成功でも失敗でも必ず結果を知らせます。
       - name: 結果を Issue に書いて閉じる
         if: always() && steps.approval.outputs.approved == 'true'
+          && (github.event_name != 'schedule' || steps.already.outputs.posted != 'true')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -89,6 +108,7 @@ jobs:
 
       - name: 投稿の記録を残す
         if: always() && steps.approval.outputs.approved == 'true'
+          && (github.event_name != 'schedule' || steps.already.outputs.posted != 'true')
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

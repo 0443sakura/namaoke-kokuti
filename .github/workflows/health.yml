@@ -4,7 +4,7 @@ name: 月1回 鍵が生きているか確かめる
 # 毎月1日 11:00 JST = 毎月1日 02:00 UTC
 on:
   schedule:
-    - cron: "0 2 1 * *"
+    - cron: "17 3 1 * *"   # 毎月1日 12:17（毎時00分は混むので避けています）
   workflow_dispatch:
 
 permissions:
