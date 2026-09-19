@@ -1,16 +1,30 @@
 #!/usr/bin/env python3
 """告知画像に、その週の開催日とホストのお名前を焼き込みます。
 
-  python3 scripts/make_images.py --draft drafts/2026-09-23.json
+告知用（金曜に出す分）と、当日用（水曜の朝に出す分）の2組を作ります。
 
-  images/weekly/2026-09-23/story-1.jpg
-  images/weekly/2026-09-23/story-2.jpg
-の2枚ができます。post.py はこちらがあれば、こちらを投稿します。
+  python3 scripts/make_images.py --draft drafts/2026-09-23.json
+      images/weekly/2026-09-23/story-1.jpg   見出し「毎週水曜日は！」
+      images/weekly/2026-09-23/story-2.jpg   帯「次回は 9月23日（水）」
+      images/weekly/2026-09-23/feed-1.jpg    上をフィードの形に縮めたもの
+
+  python3 scripts/make_images.py --draft drafts/2026-09-23.json --on-the-day
+      images/weekly/2026-09-23/today/story-1.jpg  見出し「本日9月23日！」
+      images/weekly/2026-09-23/today/story-2.jpg  もとのまま（帯を入れません）
+
+post.py は、あればこちらを投稿します。
 
 なぜ必要か
   もとの story-1.jpg には「本日！」と書いてあります。告知は金曜に出して、
   開催は翌週の水曜なので、見た人が「今日だ」と勘違いします。
   そこを開催日に差し替え、下に「次回は◯月◯日（◯）」の帯を足しています。
+  逆に当日の朝に出す分は、ほんとうに「本日」なので、そう書きます。
+
+当日用はストーリーの2枚だけです（さくらさんの決定 2026-09-19）。
+フィードは金曜の1回だけにして、同じ会の告知が並ばないようにしています。
+
+当日用には、下のオレンジの帯を**入れません**（さくらさんの指示 2026-09-19）。
+日付は1枚目の見出し「本日◯月◯日！」に入っているので、それで足ります。
 
 ★ 下の座標は、images/story-1.jpg と story-2.jpg を実際に測った値です。
   もとの画像を差し替えたら、ここも測り直してください。ずれると字が重なります。
@@ -86,7 +100,10 @@ def _put(img, text, box, color, angle=0.0):
 # ── 部品 ──────────────────────────────────────────────────────
 
 def _date_banner(im, date, box):
-    """「次回は◯月◯日（◯）」のオレンジの帯。"""
+    """「次回は◯月◯日（◯）」のオレンジの帯。
+
+    金曜の告知にだけ付けます。当日用には付けません（2026-09-19 さくらさんの指示）。
+    """
     x0, y0, x1, y1 = box
     ImageDraw.Draw(im).rounded_rectangle(box, radius=(y1 - y0) // 4, fill=ORANGE)
     _put(im, f"次回は {date.month}月{date.day}日（{WEEK[date.weekday()]}）",
@@ -94,15 +111,16 @@ def _date_banner(im, date, box):
           x1 - (x1 - x0) * .04, y1 - (y1 - y0) * .16), WHITE)
 
 
-def _hosts_card(im, members, box):
-    """「次回のホスト」の白い札。お顔が隠れない高さに置きます。"""
+def _hosts_card(im, members, box, on_the_day=False):
+    """ホストのお名前の白い札。お顔が隠れない高さに置きます。"""
     x0, y0, x1, y1 = box
     card = Image.new("RGBA", im.size, (0, 0, 0, 0))
     ImageDraw.Draw(card).rounded_rectangle(
         box, radius=40, fill=WHITE + (247,), outline=ORANGE + (255,), width=9)
     im.paste(Image.alpha_composite(im.convert("RGBA"), card).convert("RGB"), (0, 0))
 
-    _put(im, "次回のホスト", (x0 + 40, y0 + 22, x1 - 40, y0 + 76), ORANGE)
+    title = "本日のホストメンバー" if on_the_day else "次回のホスト"
+    _put(im, title, (x0 + 40, y0 + 22, x1 - 40, y0 + 76), ORANGE)
     labels = [f"{m['name']}（{PART.get(m['instrument'], m['instrument'])}）"
               for m in members]
     rows = [labels[i:i + 2] for i in range(0, len(labels), 2)]  # 2人ずつ並べます
@@ -112,8 +130,8 @@ def _hosts_card(im, members, box):
              (x0 + 40, y0 + 86 + i * h, x1 - 40, y0 + 80 + (i + 1) * h), INK)
 
 
-def _story1(date, members):
-    """1枚目。「本日！」を消して、見出しを組み直します。"""
+def _story1(date, members, on_the_day=False):
+    """1枚目。もとの「本日！」を消して、見出しを組み直します。"""
     im = Image.open(ROOT / "images" / "story-1.jpg").convert("RGB")
     d = ImageDraw.Draw(im)
 
@@ -131,19 +149,32 @@ def _story1(date, members):
     # 一緒に動いてしまった小さな飾りを消します。
     d.rectangle([730, 305, 772, 352], fill=CREAM)
 
-    # 空いた上に「毎週水曜日は！」。Instagram の名前表示に隠れない高さです。
-    _put(im, "毎週水曜日は！", (100, 178, 980, 302), ORANGE, angle=1.5)
+    # 空いた上に見出し。Instagram の名前表示に隠れない高さです。
+    # 当日の朝に出す分だけ、日付を入れて「本日」と言い切ります。
+    headline = f"本日{date.month}月{date.day}日！" if on_the_day else "毎週水曜日は！"
+    _put(im, headline, (100, 178, 980, 302), ORANGE, angle=1.5)
     d.line([(120, 325), (960, 309)], fill=YELLOW, width=22)
 
-    _hosts_card(im, members, [80, 1110, 1000, 1340])
-    _date_banner(im, date, [40, 1652, 1040, 1876])
+    _hosts_card(im, members, [80, 1110, 1000, 1340], on_the_day)
+    # 当日用は帯を入れません。日付は上の見出しに入っています。
+    if not on_the_day:
+        _date_banner(im, date, [40, 1652, 1040, 1876])
     return im
 
 
-def _story2(date):
-    """2枚目。下の白い余白に帯を足すだけです。"""
+def _story2(date, on_the_day=False):
+    """2枚目。下の白い余白に帯を足すだけです。
+
+    当日用は帯を入れないので、もとの画像がそのまま出ます。
+    書いてある文字（「毎週水曜日開催！」「20:00〜23:00」）は、当日に見ても
+    おかしくないので、そのままで困りません。
+
+    それでもここで1枚書き出します。書かずにおくと post.py が
+    images/weekly/開催日/story-2.jpg（「次回は…」の帯つき）を拾ってしまうためです。
+    """
     im = Image.open(ROOT / "images" / "story-2.jpg").convert("RGB")
-    _date_banner(im, date, [40, 1700, 1040, 1900])
+    if not on_the_day:
+        _date_banner(im, date, [40, 1700, 1040, 1900])
     return im
 
 
@@ -164,15 +195,18 @@ def _feed1(story1):
 
 # ── 入口 ──────────────────────────────────────────────────────
 
-def build(draft, out_dir):
+def build(draft, out_dir, on_the_day=False):
     date = dt.date.fromisoformat(draft["開催日"])
     out_dir.mkdir(parents=True, exist_ok=True)
-    story1 = _story1(date, draft["メンバー"])
+    story1 = _story1(date, draft["メンバー"], on_the_day)
+
+    sheets = [("story-1.jpg", story1), ("story-2.jpg", _story2(date, on_the_day))]
+    # 当日はストーリーだけ出すので、フィード用は作りません。
+    if not on_the_day:
+        sheets.append(("feed-1.jpg", _feed1(story1)))
 
     made = []
-    for name, im in (("story-1.jpg", story1),
-                     ("story-2.jpg", _story2(date)),
-                     ("feed-1.jpg", _feed1(story1))):
+    for name, im in sheets:
         path = out_dir / name
         im.save(path, quality=92)
         made.append(path)
@@ -187,18 +221,27 @@ def main():
     ap = argparse.ArgumentParser(description="告知画像に開催日とホスト名を焼き込みます。")
     ap.add_argument("--draft", required=True, help="drafts/YYYY-MM-DD.json")
     ap.add_argument("--out", help="出力先（既定は images/weekly/開催日/）")
+    ap.add_argument("--on-the-day", action="store_true",
+                    help="当日の朝に出す分を作る（見出しが「本日◯月◯日！」になります）")
     args = ap.parse_args()
 
     if not FONT_PATH.exists():
         sys.exit(f"フォントがありません: {FONT_PATH}")
 
     draft = json.loads(pathlib.Path(args.draft).read_text(encoding="utf-8"))
+    base = ROOT / "images" / "weekly" / draft["開催日"]
     out_dir = pathlib.Path(args.out) if args.out else \
-        ROOT / "images" / "weekly" / draft["開催日"]
+        (base / "today" if args.on_the_day else base)
 
-    for path in build(draft, out_dir):
-        print(f"  {path.relative_to(ROOT)}")
-    print(f"開催日 {draft['開催日']} の画像をつくりました。")
+    for path in build(draft, out_dir, args.on_the_day):
+        # --out でリポジトリの外に出したときは、そのままの場所を出します。
+        try:
+            path = path.relative_to(ROOT)
+        except ValueError:
+            pass
+        print(f"  {path}")
+    kind = "当日用" if args.on_the_day else "告知用"
+    print(f"開催日 {draft['開催日']} の{kind}の画像をつくりました。")
 
 
 if __name__ == "__main__":

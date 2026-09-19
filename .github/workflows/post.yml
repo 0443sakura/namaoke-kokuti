@@ -28,6 +28,8 @@ permissions:
 jobs:
   post:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Tokyo          # GitHub の中は世界標準時です。日本時間に合わせます
     steps:
       - uses: actions/checkout@v4
 

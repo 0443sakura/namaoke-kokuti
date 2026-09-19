@@ -21,6 +21,8 @@ permissions:
 jobs:
   draft:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Tokyo          # GitHub の中は世界標準時です。日本時間に合わせます
     steps:
       - uses: actions/checkout@v4
 
@@ -37,6 +39,9 @@ jobs:
         run: |
           python3 -m pip install --quiet Pillow
           python3 scripts/make_images.py --draft "${{ steps.build.outputs.draft }}"
+          # 当日（水曜の朝）に出す分も、いまのうちに作っておきます。
+          # 先に GitHub へ置いておけば、当日は出すだけで済みます。
+          python3 scripts/make_images.py --draft "${{ steps.build.outputs.draft }}" --on-the-day
 
       - name: 下書きと画像を記録として残す
         run: |

@@ -10,6 +10,10 @@
   python3 scripts/post.py --draft drafts/2026-09-09.json
       ぜんぶ投稿します。
 
+  python3 scripts/post.py --draft drafts/2026-09-23.json --on-the-day --only instagram_story
+      当日の朝に出す分です。「本日◯月◯日！」の画像を使い、
+      記録も logs/2026-09-23-today.json と別にします（金曜の分と混ざりません）。
+
 必要な環境変数（GitHub の Secrets に入れます）:
   META_PAGE_TOKEN  長期ページアクセストークン
   META_PAGE_ID     Facebook ページのID
@@ -37,11 +41,12 @@ POLL_LIMIT = 30  # 4秒 × 30 = 最大2分
 
 
 class Poster:
-    def __init__(self, cfg, draft, env, dry_run=False):
+    def __init__(self, cfg, draft, env, dry_run=False, on_the_day=False):
         self.cfg = cfg
         self.draft = draft
         self.env = env
         self.dry_run = dry_run
+        self.on_the_day = on_the_day   # 当日の朝に出す分
         self.results = []
 
     # ── 共通の道具 ────────────────────────────────────────────
@@ -51,19 +56,30 @@ class Poster:
 
         make_images.py がその週の画像を images/weekly/開催日/ に作っていれば、
         そちらを使います（開催日とホスト名が入っています）。
-        無ければ、もとの画像に戻ります。作り忘れても投稿は止まりません。
+        当日の朝の分は、さらに images/weekly/開催日/today/ を先に探します
+        （見出しが「本日◯月◯日！」になっているものです）。
+
+        無ければ一段ずつ手前に戻ります。作り忘れても投稿は止まりません。
         """
         base = self.cfg["image_base_url"].rstrip("/")
         date = self.draft["開催日"]
         urls = []
         for name in self.cfg["images"][kind]:
-            if (ROOT / "images" / "weekly" / date / name).exists():
-                urls.append(f"{base}/weekly/{date}/{name}")
+            # 探す順番。先にあったものを使います。
+            wanted = []
+            if self.on_the_day:
+                wanted.append(f"weekly/{date}/today/{name}")
+            wanted.append(f"weekly/{date}/{name}")
+
+            for rel in wanted:
+                if (ROOT / "images" / rel).exists():
+                    urls.append(f"{base}/{rel}")
+                    break
             else:
                 # feed-2.jpg だけは、もとのままでよいので、ここを通るのがふつうです。
                 # ほかの画像がここを通ると「本日！」のままのものが出てしまいます。
                 if name != "feed-2.jpg":
-                    self.log(f"  ⚠ images/weekly/{date}/{name} がありません。"
+                    self.log(f"  ⚠ images/{wanted[0]} がありません。"
                              "「本日！」と書かれたままの画像が出ます。")
                 urls.append(f"{base}/{name}")
         return urls
@@ -202,10 +218,11 @@ class Poster:
         return self.results
 
 
-def summary(draft, results, dry_run):
+def summary(draft, results, dry_run, on_the_day=False):
     d = dt.date.fromisoformat(draft["開催日"])
     head = "下書き確認（投稿していません）" if dry_run else "投稿結果"
-    lines = [f"### {head} — {d.month}/{d.day}（水）の告知", ""]
+    what = "当日のおしらせ" if on_the_day else "告知"
+    lines = [f"### {head} — {d.month}/{d.day}（水）の{what}", ""]
     for r in results:
         lines.append(f"- {'✅' if r['ok'] else '❌'} {r['step']} … {r['detail']}")
     miss = draft["アカウント未登録"]["instagram"]
@@ -218,8 +235,12 @@ def main():
     ap = argparse.ArgumentParser(description="下書きを Instagram と Facebook に投稿します")
     ap.add_argument("--draft", required=True, help="build_draft.py が作った json")
     ap.add_argument("--dry-run", action="store_true", help="投稿せず、内容だけ表示する")
-    ap.add_argument("--only", choices=["feed", "story", "instagram", "facebook"],
+    ap.add_argument("--only", choices=["feed", "story", "instagram", "facebook",
+                                       "instagram_feed", "instagram_story",
+                                       "facebook_feed", "facebook_story"],
                     help="一部だけ投稿する（story は24時間で消えるので試しに向きます）")
+    ap.add_argument("--on-the-day", action="store_true",
+                    help="当日の朝に出す分（today/ の画像を使い、記録も別にします）")
     ap.add_argument("--approval", help="承認コメントで本文が差し替えられていたら、そちらを使う")
     args = ap.parse_args()
 
@@ -259,14 +280,17 @@ def main():
         else:
             raise SystemExit(msg)
 
-    poster = Poster(cfg, draft, env, dry_run=args.dry_run)
+    poster = Poster(cfg, draft, env, dry_run=args.dry_run, on_the_day=args.on_the_day)
     results = poster.run(args.only)
 
-    text = summary(draft, results, args.dry_run)
+    text = summary(draft, results, args.dry_run, args.on_the_day)
     print("\n" + text)
 
     if not args.dry_run:
-        log_path = ROOT / "logs" / f"{draft['開催日']}.json"
+        # 当日の分は別の記録にします。金曜の分と混ざると、
+        # already_posted.py が「もう出した」と勘違いします。
+        stem = draft["開催日"] + ("-today" if args.on_the_day else "")
+        log_path = ROOT / "logs" / f"{stem}.json"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         log_path.write_text(
             json.dumps({"投稿日時": dt.datetime.now().isoformat(timespec="seconds"),

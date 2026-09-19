@@ -1,0 +1,154 @@
+name: 水曜の朝 当日のおしらせを出す
+
+# 開催当日（水曜）の朝に、Instagram のストーリーを2枚出します。
+# 「本日◯月◯日！」「本日のホストメンバー」と書いた画像です。
+#
+# 金曜の告知とちがうところ
+#   - ストーリーだけです（フィードには出しません。同じ会の告知が並ばないように）
+#   - 承認は金曜のものを使い回します。当日の朝に承認作業は要りません
+#     （やめたいときは、その週の Issue に「やめ」とコメントしてください。両方止まります）
+#   - Facebook は自動で出せないので、ここでも出しません（手で貼ってください）
+#
+# GitHub の時計は世界標準時（UTC）です。日本時間から9時間引きます。
+# 水曜の朝5〜8時（日本時間）は、UTC では**火曜の20〜23時**にあたります。
+#
+# ★ 定時実行は、GitHub が混んでいると遅れます。飛ばされることもあります。
+#   2026-09-18 に確かめました（木曜の分が5時間28分おくれ、金曜の分は飛びました）。
+#   そこで朝5時台から30分おきに何回か起こします。出すのは最初の1回だけです
+#   （already_posted.py が logs/開催日-today.json を見ています）。
+#   **8時までに必ず出る、という約束はできません。** GitHub 側の都合です。
+#   確実に8時に出したいときは、下の「Run workflow」から手で動かしてください。
+on:
+  schedule:
+    - cron: "2 20 * * 2"    # 水 05:02
+    - cron: "34 20 * * 2"   # 水 05:34
+    - cron: "8 21 * * 2"    # 水 06:08
+    - cron: "41 21 * * 2"   # 水 06:41
+    - cron: "17 22 * * 2"   # 水 07:17
+    - cron: "49 22 * * 2"   # 水 07:49
+    - cron: "26 23 * * 2"   # 水 08:26（ぜんぶ飛ばされたときの最後の保険）
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "投稿せず、何が出るかだけ見る"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  today:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Tokyo          # GitHub の中は世界標準時です。日本時間に合わせます
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 「次の水曜」ではなく「今日」の分を指します（--on-the-day）。
+      - name: 今日の下書きを見つける
+        id: find
+        run: |
+          DRAFT=$(python3 scripts/build_draft.py --on-the-day --path-only)
+          echo "draft=$DRAFT" >> "$GITHUB_OUTPUT"
+          if [ ! -f "$DRAFT" ]; then
+            echo "::error::$DRAFT がありません。先週の木曜の下書きが作られなかったようです。"
+            exit 1
+          fi
+
+      # 金曜と同じ承認を見ます。Issue は閉じていても読めます。
+      # 「やめ」とコメントされていれば、ここで承認なしになります。
+      - name: 承認のコメントがあるか確かめる
+        id: approval
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/github_issue.py approval --draft "${{ steps.find.outputs.draft }}"
+
+      # ふつうは木曜に作ってあります。作られていないときだけ、ここで作ります。
+      # Instagram は画像を公開URLから取りに行くので、先に GitHub へ送ります。
+      - name: 当日用の画像が無ければ、ここで作る
+        if: steps.approval.outputs.approved == 'true'
+        run: |
+          DATE=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['開催日'])" "${{ steps.find.outputs.draft }}")
+          if [ -f "images/weekly/$DATE/today/story-1.jpg" ]; then
+            echo "当日用の画像はもうあります。"
+            exit 0
+          fi
+          echo "::warning::当日用の画像がありません。いま作ります。"
+          python3 -m pip install --quiet Pillow
+          python3 scripts/make_images.py --draft "${{ steps.find.outputs.draft }}" --on-the-day
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add images/weekly/
+          git diff --staged --quiet || git commit -m "当日用の画像 $DATE"
+          git push
+
+      # 定時実行は何回か起きます。もう出した回を二度出さないための確認です。
+      # 見る記録は logs/開催日-today.json で、金曜の分とは別です。
+      # 手で動かしたときは見ません（出し直したいことがあるためです）。
+      - name: もう投稿していないか確かめる
+        id: already
+        run: python3 scripts/already_posted.py --on-the-day --draft "${{ steps.find.outputs.draft }}"
+
+      - name: もう投稿ずみなので、今回は出しません
+        if: github.event_name == 'schedule' && steps.already.outputs.posted == 'true'
+        run: echo "::notice::当日の分はもう出しています。二重に出さないよう、ここで終わります。"
+
+      - name: 承認が無かったので、当日の分も出しません
+        if: steps.approval.outputs.approved != 'true'
+        run: |
+          echo "::notice::承認のコメントが無い（または「やめ」があった）ため、見送りました。"
+          echo "Issue に approve とコメントしてから、この画面の Re-run で出せます。"
+
+      - name: Instagram にストーリーを出す
+        if: steps.approval.outputs.approved == 'true'
+          && (github.event_name != 'schedule' || steps.already.outputs.posted != 'true')
+        env:
+          META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+          META_PAGE_ID:    ${{ secrets.META_PAGE_ID }}
+          IG_USER_ID:      ${{ secrets.IG_USER_ID }}
+          META_PLACE_ID:   ${{ secrets.META_PLACE_ID }}
+          SUMMARY_FILE:    summary.md
+        run: |
+          python3 scripts/post.py \
+            --draft "${{ steps.find.outputs.draft }}" \
+            --approval .approval.json \
+            --on-the-day --only instagram_story \
+            ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      # 出したときは、成功でも失敗でも必ず結果を知らせます。
+      # Issue は金曜に閉じていますが、閉じたままコメントできます。
+      - name: 結果を Issue に書く
+        if: always() && steps.approval.outputs.approved == 'true'
+          && (github.event_name != 'schedule' || steps.already.outputs.posted != 'true')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f summary.md ]; then
+            {
+              echo "### ❌ 当日のおしらせを出せませんでした"
+              echo ""
+              echo "途中で止まってしまいました。下の記録に、Meta が返した理由が出ています。"
+              echo ""
+              echo "実行の記録: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            } > summary.md
+          fi
+          python3 scripts/github_issue.py comment \
+            --draft "${{ steps.find.outputs.draft }}" --file summary.md
+
+      - name: 投稿の記録を残す
+        if: always() && steps.approval.outputs.approved == 'true'
+          && (github.event_name != 'schedule' || steps.already.outputs.posted != 'true')
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add logs/
+          git diff --staged --quiet || git commit -m "当日の投稿の記録 ${{ steps.find.outputs.draft }}"
+          git push

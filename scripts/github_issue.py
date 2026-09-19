@@ -83,7 +83,16 @@ def cmd_open(draft, draft_path):
     tags = draft.get("user_tags") or []
 
     body = f"""**{d.month}月{d.day}日（水）の生バンドカラオケ**の告知です。
-明日の**金曜11時**に、Instagram と Facebook へ投稿します。
+
+**この1回の承認で、2回投稿します。**
+
+| いつ | 何を |
+|---|---|
+| 明日の**金曜11時** | 告知（Instagram のフィードとストーリー） |
+| **{d.month}月{d.day}日（水）の朝** | 当日のおしらせ（Instagram のストーリーだけ） |
+
+当日の分は「本日{d.month}月{d.day}日！」「本日のホストメンバー」と書いた画像に差し替わります。
+Facebook は自動で投稿できないので、手で貼ってください。
 
 ## 投稿してよければ
 
@@ -91,6 +100,7 @@ def cmd_open(draft, draft_path):
 （このお知らせメールに、そのまま返信しても届きます）
 
 **承認がないと投稿しません。** うっかり古い内容が出てしまうのを防ぐためです。
+**やめたくなったら、`やめ` とコメントしてください。** 当日の分も止まります。
 
 ## 直したいところがあるとき
 
@@ -107,12 +117,18 @@ def cmd_open(draft, draft_path):
 タグ付け：{'、'.join('@' + t['username'] for t in tags) if tags else '（今回はなし）'}
 {('' if not miss else chr(10) + '> ℹ️ ' + '、'.join(miss) + ' さんの Instagram がわかったら、`data/hosts.json` に書き足してください。次回から自動でタグが付きます。')}
 
-## 出る画像
+## 金曜に出る画像
 
 | フィード | ストーリー |
 |---|---|
 | <img src="{weekly}/feed-1.jpg" width="200"> | <img src="{weekly}/story-1.jpg" width="120"> |
 | <img src="{base}/feed-2.jpg" width="200"> | <img src="{weekly}/story-2.jpg" width="120"> |
+
+## 当日の朝に出る画像（ストーリーだけ）
+
+| 1枚目 | 2枚目 |
+|---|---|
+| <img src="{weekly}/today/story-1.jpg" width="120"> | <img src="{weekly}/today/story-2.jpg" width="120"> |
 
 ## Instagram の本文
 

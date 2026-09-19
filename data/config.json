@@ -17,11 +17,18 @@
       "story-2.jpg"
     ]
   },
+  "_Facebookについて": [
+    "facebook_feed と facebook_story を false にしてあります（2026-09-19）。",
+    "Meta から pages_manage_posts の許可が下りていないため、自動では投稿できません。",
+    "true に戻すと、毎週かならず失敗して、GitHub の画面が赤くなります。",
+    "Facebook は手で貼ってください。手順は Facebookへの貼り方.md です。",
+    "将来 Meta の許可が下りたら、ここを true に戻せば自動に戻ります。"
+  ],
   "post_to": {
     "instagram_feed": true,
     "instagram_story": true,
-    "facebook_feed": true,
-    "facebook_story": true
+    "facebook_feed": false,
+    "facebook_story": false
   },
   "shop": {
     "name": "ミュージックカフェSAKURA",

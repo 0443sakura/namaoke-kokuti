@@ -5,6 +5,8 @@
 
   python3 scripts/build_draft.py --show              いまの日付で作って中身を表示
   python3 scripts/build_draft.py --date 2026-09-03   その日に動いた想定で作る
+  python3 scripts/build_draft.py --on-the-day --path-only
+      今日が水曜のとき、その日の下書きの場所を出す（当日の朝の投稿で使います）
 """
 
 import argparse
@@ -120,9 +122,18 @@ def user_tags(members):
     ]
 
 
-def build(today):
+def build(today, on_the_day=False):
     cfg, hosts_table = load("config.json"), load("hosts.json")
-    date = next_wednesday(today)
+    # 当日の朝の投稿は、次の水曜ではなく「今日」の分を指します。
+    if on_the_day:
+        if today.weekday() != WEDNESDAY:
+            raise SystemExit(
+                f"--on-the-day は水曜に使うものです（今日は {today} で"
+                f"{WEEKDAY_JA[today.weekday()]}曜です）。"
+            )
+        date = today
+    else:
+        date = next_wednesday(today)
     week, members = hosts_for(date, hosts_table)
 
     return {
@@ -162,10 +173,12 @@ def main():
     ap.add_argument("--out", default=None, help="書き出し先（既定 drafts/開催日.json）")
     ap.add_argument("--path-only", action="store_true",
                     help="書き出さず、下書きファイルの場所だけを出す（金曜の投稿で使います）")
+    ap.add_argument("--on-the-day", action="store_true",
+                    help="次の水曜ではなく、今日（水曜）の分を指す（当日の朝の投稿で使います）")
     args = ap.parse_args()
 
     today = dt.date.fromisoformat(args.date) if args.date else dt.date.today()
-    draft = build(today)
+    draft = build(today, args.on_the_day)
 
     out = pathlib.Path(args.out) if args.out else ROOT / "drafts" / f"{draft['開催日']}.json"
 
