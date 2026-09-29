@@ -218,7 +218,7 @@ class Poster:
         return self.results
 
 
-def summary(draft, results, dry_run, on_the_day=False):
+def summary(draft, results, dry_run, on_the_day=False, cfg=None, story_urls=None):
     d = dt.date.fromisoformat(draft["開催日"])
     head = "下書き確認（投稿していません）" if dry_run else "投稿結果"
     what = "当日のおしらせ" if on_the_day else "告知"
@@ -228,7 +228,29 @@ def summary(draft, results, dry_run, on_the_day=False):
     miss = draft["アカウント未登録"]["instagram"]
     if miss:
         lines += ["", f"> ℹ️ アカウント未登録のためタグ付けを飛ばした方：{'、'.join(miss)}"]
+    if on_the_day and story_urls:
+        lines += facebook_story_kit(cfg, story_urls)
     return "\n".join(lines)
+
+
+def facebook_story_kit(cfg, story_urls):
+    """Facebook のストーリーズに手で上げるための一式です（2026-09-30 から）。
+
+    Facebook は自動で出せないので、当日の朝の Issue のコメントに、
+    Instagram と同じ画像2枚と、画像に重ねる短い文字を添えます。
+    ストーリーズには本文の欄が無いので、文字は画像の上に重ねる分だけです。
+    """
+    shop, ev = cfg["shop"], cfg["event"]
+    lines = ["", "---", "", "### 📱 Facebook のストーリーズ用（手で上げる分）", "",
+             "Instagram に出たものと同じ画像です。**1枚目 → 2枚目**の順に上げてください。",
+             "スマホなら、下の「画像を開く」を押して、画像を**長押し →「写真に保存」**で入ります。", ""]
+    for i, url in enumerate(story_urls, 1):
+        lines += [f"**{i}枚目** … [画像を開く]({url})", "", f"<img src=\"{url}\" width=\"240\">", ""]
+    lines += ["文字も入れる場合は、「Aa」を押して、これを貼ります（入れなくても伝わります）。", "",
+              "1枚目に重ねる文字", "```", f"今夜{ev['start']}〜！", shop["name"], "```", "",
+              "2枚目に重ねる文字", "```", shop["address"], shop["tel"], "```", "",
+              "上げる前に、**お店のページ（ミュージックカフェsakura）**になっているか見てください。"]
+    return lines
 
 
 def main():
@@ -283,7 +305,8 @@ def main():
     poster = Poster(cfg, draft, env, dry_run=args.dry_run, on_the_day=args.on_the_day)
     results = poster.run(args.only)
 
-    text = summary(draft, results, args.dry_run, args.on_the_day)
+    text = summary(draft, results, args.dry_run, args.on_the_day,
+                   cfg=cfg, story_urls=poster.image_urls("story") if args.on_the_day else None)
     print("\n" + text)
 
     if not args.dry_run:
