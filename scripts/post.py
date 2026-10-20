@@ -26,6 +26,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import re
 import sys
 import time
 
@@ -240,17 +241,34 @@ def facebook_story_kit(cfg, story_urls):
     Instagram と同じ画像2枚と、画像に重ねる短い文字を添えます。
     ストーリーズには本文の欄が無いので、文字は画像の上に重ねる分だけです。
     """
-    shop, ev = cfg["shop"], cfg["event"]
+    text1, text2 = facebook_story_texts(cfg)
     lines = ["", "---", "", "### 📱 Facebook のストーリーズ用（手で上げる分）", "",
              "Instagram に出たものと同じ画像です。**1枚目 → 2枚目**の順に上げてください。",
              "スマホなら、下の「画像を開く」を押して、画像を**長押し →「写真に保存」**で入ります。", ""]
     for i, url in enumerate(story_urls, 1):
         lines += [f"**{i}枚目** … [画像を開く]({url})", "", f"<img src=\"{url}\" width=\"240\">", ""]
     lines += ["文字も入れる場合は、「Aa」を押して、これを貼ります（入れなくても伝わります）。", "",
-              "1枚目に重ねる文字", "```", f"今夜{ev['start']}〜！", shop["name"], "```", "",
-              "2枚目に重ねる文字", "```", shop["address"], shop["tel"], "```", "",
+              "1枚目に重ねる文字", "```", text1, "```", "",
+              "2枚目に重ねる文字", "```", text2, "```", "",
               "上げる前に、**お店のページ（ミュージックカフェsakura）**になっているか見てください。"]
     return lines
+
+
+def facebook_story_texts(cfg):
+    """Facebook のストーリーズの画像に重ねる短い文字（1枚目・2枚目）です。
+
+    Issue のコメントと、Mac の画面のお知らせ（scripts/mac/fbkit.sh）の両方がこれを使います。
+    """
+    shop, ev = cfg["shop"], cfg["event"]
+    return f"今夜{ev['start']}〜！\n{shop['name']}", f"{shop['address']}\n{shop['tel']}"
+
+
+def on_the_day_caption(caption):
+    """当日に Facebook へ貼る文章です。金曜の本文の「次回は 10/21（水）」を「本日は」にします。
+
+    2026-10-21 にさくらさんから指示がありました。金曜の本文（build_draft.py の render()）は変えません。
+    """
+    return re.sub(r"^次回は", "本日は", caption, count=1, flags=re.M)
 
 
 def main():

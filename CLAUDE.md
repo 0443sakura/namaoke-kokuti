@@ -93,6 +93,18 @@ Instagram は公開URLから画像を取りに行くので、先に GitHub へ�
 （画像2枚の公開URLと、画像に重ねる短い文字）も付きます。`post.py` の `facebook_story_kit()` です
 （2026-09-30 にさくらさんから頼まれました）。重ねる文字は `data/config.json` から作ります。
 
+さらに、**Instagram に出たところで、Mac の画面にも「こちらを」と出します**（2026-10-21 から。
+さくらさんの頼み）。`scripts/mac/fbkit.sh` が、デスクトップの `Facebook用-◯月◯日-本日/` に
+画像2枚と `重ねる文字.txt`、`文章.txt`（キャプション）を入れます。「開く」を押すと文章をコピーし、
+4つを選んだ状態のフォルダと **AirDrop の窓**を開きます（iPhone へドラッグで送れるように。2026-10-21 の頼み）。
+文章は `drafts/開催日.json` の facebook の分で、承認コメントの差し替えがあればそちらです
+（判定は `github_issue.py approval` をそのまま呼びます）。
+当日に貼るので、**「次回は 10/21（水）」の行を「本日は 10/21（水）」にします**（`post.py` の
+`on_the_day_caption()`。2026-10-21 にさくらさんから指示。**元に戻してはいけません**）。金曜の本文は「次回は」のままです。
+動かすのは `kick.sh today`（出たのを見届けてから。最大20分待つ）と、水曜の `remind.sh`（出しそびれた分）。
+同じ日に二度は出しません（`~/Library/Application Support/namaoke-kokuti/fbkit-開催日`）。
+重ねる文字は `post.py` の `facebook_story_texts()` で、Issue のコメントと同じものです。
+
 記録は `logs/開催日-today.json` です。**金曜の `logs/開催日.json` とは別にします。**
 一緒にすると `already_posted.py` が「もう出した」と勘違いして、当日の分が出ません。
 

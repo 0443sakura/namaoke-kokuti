@@ -67,7 +67,12 @@ if [[ $WD == 3 ]]; then
   # 水曜は開催日です。当日の朝のストーリーだけ見ます。
   DATE=$(date +%F)
   (( 10#$HOUR < 9 )) && exit 0
-  if [[ $(posted "$DATE-today") == True ]]; then say "$DATE 当日の分は出ています"; exit 0; fi
+  if [[ $(posted "$DATE-today") == True ]]; then
+    say "$DATE 当日の分は出ています"
+    # 朝に Mac が寝ていて Facebook 用を出しそびれた分です（もう出していれば何もしません）。
+    "${0:A:h}/fbkit.sh" "$DATE"
+    exit 0
+  fi
   alert "【生バンドカラオケ】本日のストーリーが、まだ出ていません" \
     "今日の朝の Instagram ストーリーが出ていません。Claude に「当日のストーリーが出ていない」と話しかけてください。" "$ISSUES"
   exit 0

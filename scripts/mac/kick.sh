@@ -22,6 +22,7 @@
 set -u
 WHAT=${1:-}
 GH=/opt/homebrew/bin/gh
+HERE=${0:A:h}
 REPO=0443sakura/namaoke-kokuti
 LOG="$HOME/Library/Logs/namaoke-kokuti.log"
 export TZ=Asia/Tokyo
@@ -59,16 +60,30 @@ elif [[ $WHAT == today ]]; then
   # 当日の分は水曜にしか出しません（寝ていて木曜に起きたときは見送り）
   if [[ $(date +%u) != 3 ]]; then say "今日は水曜ではないので見送ります"; exit 0; fi
   DATE=$(date +%F)
-  if [[ $(posted "$DATE-today") == True ]]; then say "$DATE 当日の分はもう出ています"; exit 0; fi
+  if [[ $(posted "$DATE-today") == True ]]; then
+    say "$DATE 当日の分はもう出ています"; "$HERE/fbkit.sh" "$DATE"; exit 0
+  fi
 fi
+
+# 当日の分は、Instagram に出たのを見届けてから、Facebook 用を画面に出します（fbkit.sh）。
+# 出るまで最大20分待ちます。出なければ 9:30 の remind.sh が知らせます。
+kit_when_posted() {
+  [[ $WHAT == today ]] || return 0
+  for i in {1..40}; do
+    sleep 30
+    if [[ $(posted "$DATE-today") == True ]]; then "$HERE/fbkit.sh" "$DATE"; return 0; fi
+  done
+  say "20分待ちましたが、当日の分がまだ出ていません"
+}
 
 # GitHub の定時実行がちょうど動いているなら、そちらに任せます。
 BUSY=$($GH run list -R $REPO --workflow $WF --json status \
   --jq '[.[]|select(.status!="completed")]|length' 2>/dev/null)
-if [[ ${BUSY:-0} != 0 ]]; then say "GitHub 側でいま動いているので任せます"; exit 0; fi
+if [[ ${BUSY:-0} != 0 ]]; then say "GitHub 側でいま動いているので任せます"; kit_when_posted; exit 0; fi
 
 if $GH workflow run $WF -R $REPO >> "$LOG" 2>&1; then
   say "$WF を起こしました"
+  kit_when_posted
 else
   say "$WF を起こせませんでした"; exit 1
 fi

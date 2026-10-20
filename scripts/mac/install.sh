@@ -17,7 +17,7 @@ HERE=${0:A:h}
 AGENTS="$HOME/Library/LaunchAgents"
 UID_=$(id -u)
 mkdir -p "$AGENTS" "$HOME/Library/Logs"
-chmod +x "$HERE/kick.sh" "$HERE/remind.sh"
+chmod +x "$HERE/kick.sh" "$HERE/remind.sh" "$HERE/fbkit.sh"
 
 # 名前 曜日(0=日) 時 分
 JOBS=("today 3 7 45" "draft 4 10 55" "post 5 10 55")
