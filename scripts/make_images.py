@@ -11,6 +11,7 @@
   python3 scripts/make_images.py --draft drafts/2026-09-23.json --on-the-day
       images/weekly/2026-09-23/today/story-1.jpg  見出し「本日9月23日！」
       images/weekly/2026-09-23/today/story-2.jpg  もとのまま（帯を入れません）
+      images/weekly/2026-09-23/today/feed-1.jpg   上の1枚目をフィードの形に縮めたもの
 
 post.py は、あればこちらを投稿します。
 
@@ -201,9 +202,8 @@ def build(draft, out_dir, on_the_day=False):
     story1 = _story1(date, draft["メンバー"], on_the_day)
 
     sheets = [("story-1.jpg", story1), ("story-2.jpg", _story2(date, on_the_day))]
-    # 当日はストーリーだけ出すので、フィード用は作りません。
-    if not on_the_day:
-        sheets.append(("feed-1.jpg", _feed1(story1)))
+    # 当日もフィードに出します（2026-10-21 から。さくらさんの決定）。
+    sheets.append(("feed-1.jpg", _feed1(story1)))
 
     made = []
     for name, im in sheets:

@@ -1,10 +1,10 @@
 name: 水曜の朝 当日のおしらせを出す
 
-# 開催当日（水曜）の朝に、Instagram のストーリーを2枚出します。
-# 「本日◯月◯日！」「本日のホストメンバー」と書いた画像です。
+# 開催当日（水曜）の朝に、Instagram のフィードとストーリーを出します。
+# 「本日◯月◯日！」「本日のホストメンバー」と書いた画像と、「本日は 10/21（水）」の本文です。
 #
 # 金曜の告知とちがうところ
-#   - ストーリーだけです（フィードには出しません。同じ会の告知が並ばないように）
+#   - フィードにも出します（2026-10-21 から。さくらさんの決定。金曜の投稿と2つ並びます）
 #   - 承認は金曜のものを使い回します。当日の朝に承認作業は要りません
 #     （やめたいときは、その週の Issue に「やめ」とコメントしてください。両方止まります）
 #   - Facebook は自動で出せないので、ここでも出しません（手で貼ってください）
@@ -77,7 +77,7 @@ jobs:
         if: steps.approval.outputs.approved == 'true'
         run: |
           DATE=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['開催日'])" "${{ steps.find.outputs.draft }}")
-          if [ -f "images/weekly/$DATE/today/story-1.jpg" ]; then
+          if [ -f "images/weekly/$DATE/today/story-1.jpg" ] && [ -f "images/weekly/$DATE/today/feed-1.jpg" ]; then
             echo "当日用の画像はもうあります。"
             exit 0
           fi
@@ -107,7 +107,7 @@ jobs:
           echo "::notice::承認のコメントが無い（または「やめ」があった）ため、見送りました。"
           echo "Issue に approve とコメントしてから、この画面の Re-run で出せます。"
 
-      - name: Instagram にストーリーを出す
+      - name: Instagram にフィードとストーリーを出す
         if: steps.approval.outputs.approved == 'true'
           && (github.event_name != 'schedule' || steps.already.outputs.posted != 'true')
         env:
@@ -120,7 +120,7 @@ jobs:
           python3 scripts/post.py \
             --draft "${{ steps.find.outputs.draft }}" \
             --approval .approval.json \
-            --on-the-day --only instagram_story \
+            --on-the-day --only instagram \
             ${{ inputs.dry_run && '--dry-run' || '' }}
 
       # 出したときは、成功でも失敗でも必ず結果を知らせます。

@@ -10,8 +10,8 @@
   python3 scripts/post.py --draft drafts/2026-09-09.json
       ぜんぶ投稿します。
 
-  python3 scripts/post.py --draft drafts/2026-09-23.json --on-the-day --only instagram_story
-      当日の朝に出す分です。「本日◯月◯日！」の画像を使い、
+  python3 scripts/post.py --draft drafts/2026-09-23.json --on-the-day --only instagram
+      当日の朝に出す分です（フィードとストーリー）。「本日◯月◯日！」の画像と「本日は」の本文を使い、
       記録も logs/2026-09-23-today.json と別にします（金曜の分と混ざりません）。
 
 必要な環境変数（GitHub の Secrets に入れます）:
@@ -125,6 +125,8 @@ class Poster:
     def instagram_feed(self):
         ig = self.env["ig_user_id"]
         caption = self.draft["captions"]["instagram"]
+        if self.on_the_day:
+            caption = on_the_day_caption(caption)
         tags = self.draft.get("user_tags") or []
 
         def build(with_tags):
@@ -264,7 +266,9 @@ def facebook_story_texts(cfg):
 
 
 def on_the_day_caption(caption):
-    """当日に Facebook へ貼る文章です。金曜の本文の「次回は 10/21（水）」を「本日は」にします。
+    """当日の本文です。金曜の本文の「次回は 10/21（水）」を「本日は」にします。
+
+    当日の Instagram のフィードと、Facebook に手で貼る文章（scripts/mac/fbkit.sh）の両方がこれを使います。
 
     2026-10-21 にさくらさんから指示がありました。金曜の本文（build_draft.py の render()）は変えません。
     """

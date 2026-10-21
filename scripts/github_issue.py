@@ -89,9 +89,10 @@ def cmd_open(draft, draft_path):
 | いつ | 何を |
 |---|---|
 | 明日の**金曜11時** | 告知（Instagram のフィードとストーリー） |
-| **{d.month}月{d.day}日（水）の朝** | 当日のおしらせ（Instagram のストーリーだけ） |
+| **{d.month}月{d.day}日（水）の朝** | 当日のおしらせ（Instagram のフィードとストーリー） |
 
 当日の分は「本日{d.month}月{d.day}日！」「本日のホストメンバー」と書いた画像に差し替わります。
+本文は「次回は」が「本日は」になります。
 Facebook は自動で投稿できないので、手で貼ってください。
 
 ## 投稿してよければ
@@ -124,11 +125,12 @@ Facebook は自動で投稿できないので、手で貼ってください。
 | <img src="{weekly}/feed-1.jpg" width="200"> | <img src="{weekly}/story-1.jpg" width="120"> |
 | <img src="{base}/feed-2.jpg" width="200"> | <img src="{weekly}/story-2.jpg" width="120"> |
 
-## 当日の朝に出る画像（ストーリーだけ）
+## 当日の朝に出る画像
 
-| 1枚目 | 2枚目 |
+| フィード | ストーリー |
 |---|---|
-| <img src="{weekly}/today/story-1.jpg" width="120"> | <img src="{weekly}/today/story-2.jpg" width="120"> |
+| <img src="{weekly}/today/feed-1.jpg" width="200"> | <img src="{weekly}/today/story-1.jpg" width="120"> |
+| <img src="{base}/feed-2.jpg" width="200"> | <img src="{weekly}/today/story-2.jpg" width="120"> |
 
 ## Instagram の本文
 
