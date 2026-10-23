@@ -86,7 +86,7 @@ if [[ $(posted "$DATE") == True ]]; then say "$DATE の分は出ています"; e
 
 # その週の Issue（タイトルは github_issue.py の title_for() と同じ）
 NUM=$($GH issue list -R $REPO --state all --label 告知 -L 10 --json number,title \
-  --jq ".[] | select(.title == \"$LABEL の告知 — 承認をお願いします\") | .number" 2>/dev/null | head -1)
+  --jq ".[] | select(.title == \"${LABEL}の告知 — 承認をお願いします\") | .number" 2>/dev/null | head -1)
 if [[ -z $NUM ]]; then say "$LABEL の Issue はまだありません（下書き前）"; exit 0; fi
 URL="$ISSUES/$NUM"
 
