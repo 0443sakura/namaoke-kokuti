@@ -82,6 +82,10 @@ def cmd_open(draft, draft_path):
     miss = draft["アカウント未登録"]["instagram"]
     tags = draft.get("user_tags") or []
 
+    # 3枚目（青いポスター）は、config の images.feed にあるときだけ見せます。
+    feed3 = (f'| <img src="{base}/feed-3.jpg" width="200"> | |\n'
+             if "feed-3.jpg" in cfg["images"]["feed"] else "")
+
     body = f"""**{d.month}月{d.day}日（水）の生バンドカラオケ**の告知です。
 
 **この1回の承認で、2回投稿します。**
@@ -124,14 +128,14 @@ Facebook は自動で投稿できないので、手で貼ってください。
 |---|---|
 | <img src="{weekly}/feed-1.jpg" width="200"> | <img src="{weekly}/story-1.jpg" width="120"> |
 | <img src="{base}/feed-2.jpg" width="200"> | <img src="{weekly}/story-2.jpg" width="120"> |
-
+{feed3}
 ## 当日の朝に出る画像
 
 | フィード | ストーリー |
 |---|---|
 | <img src="{weekly}/today/feed-1.jpg" width="200"> | <img src="{weekly}/today/story-1.jpg" width="120"> |
 | <img src="{base}/feed-2.jpg" width="200"> | <img src="{weekly}/today/story-2.jpg" width="120"> |
-
+{feed3}
 ## Instagram の本文
 
 ```

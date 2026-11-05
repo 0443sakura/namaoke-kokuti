@@ -77,9 +77,9 @@ class Poster:
                     urls.append(f"{base}/{rel}")
                     break
             else:
-                # feed-2.jpg だけは、もとのままでよいので、ここを通るのがふつうです。
+                # feed-2.jpg と feed-3.jpg は、もとのままでよいので、ここを通るのがふつうです。
                 # ほかの画像がここを通ると「本日！」のままのものが出てしまいます。
-                if name != "feed-2.jpg":
+                if name not in ("feed-2.jpg", "feed-3.jpg"):  # feed-3 は青いポスター（毎週同じ）
                     self.log(f"  ⚠ images/{wanted[0]} がありません。"
                              "「本日！」と書かれたままの画像が出ます。")
                 urls.append(f"{base}/{name}")

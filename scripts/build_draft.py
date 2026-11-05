@@ -91,7 +91,9 @@ def unregistered(members, platform):
 def render(platform, date, members, cfg):
     shop, ev = cfg["shop"], cfg["event"]
 
-    lines = [
+    # data/config.json の news は、いちばん上に置きます（2026-11-05 さくらさんの指示）。
+    news = cfg.get("news") or []
+    lines = list(news) + ([""] if news else []) + [
         "毎週水曜日は、完全生演奏の「生バンドカラオケ」！",
         "プロのミュージシャンが、あなたの歌を生演奏でバックアップします。",
         "",
