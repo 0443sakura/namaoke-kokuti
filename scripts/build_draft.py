@@ -49,7 +49,24 @@ def hosts_for(date, hosts_table):
         raise SystemExit(
             f"{date} は第{n}水曜ですが、data/hosts.json に {key} がありません。"
         )
-    return n, hosts_table[key]
+    members = [dict(m) for m in hosts_table[key]]
+    return n, apply_substitutes(date, members)
+
+
+def apply_substitutes(date, members):
+    """data/substitutes.json に、その日だけの代わりの人があれば入れ替えます。"""
+    path = ROOT / "data" / "substitutes.json"
+    if not path.exists():
+        return members
+    subs = json.loads(path.read_text(encoding="utf-8")).get(date.isoformat(), [])
+    for s in subs:
+        names = [m["name"] for m in members]
+        if s["out"] not in names:
+            raise SystemExit(
+                f"data/substitutes.json: {date} のメンバーに「{s['out']}」さんがいません。"
+            )
+        members[names.index(s["out"])] = dict(s["in"])
+    return members
 
 
 def format_date(date):
