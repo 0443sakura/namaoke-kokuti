@@ -1,7 +1,7 @@
 #!/bin/zsh
 # 当日の朝、Instagram にストーリーが出たら、Facebook のストーリーズ用を
-# デスクトップに用意して（画像2枚・重ねる文字・文章）、この Mac の画面に「こちらを」と出します。
-# 「開く」で4つを選んだフォルダと AirDrop の窓を開くので、iPhone へドラッグで送れます。
+# デスクトップに用意して（画像2〜3枚・重ねる文字・文章）、この Mac の画面に「こちらを」と出します。
+# 「開く」で中身を全部選んだフォルダと AirDrop の窓を開くので、iPhone へドラッグで送れます。
 #
 #   scripts/mac/fbkit.sh 2026-10-21         … 用意して知らせる（その日1回だけ）
 #   scripts/mac/fbkit.sh 2026-10-21 again   … もう知らせた日でも、もう1回出す
@@ -56,6 +56,20 @@ done
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 $GH api -X GET "repos/$REPO/contents/data/config.json" -H "Accept: application/vnd.github.raw" > "$TMP/config.json" 2>/dev/null
 $GH api -X GET "repos/$REPO/contents/drafts/$DATE.json" -H "Accept: application/vnd.github.raw" > "$TMP/draft.json" 2>/dev/null
+
+# 3枚目の青いポスター（「新しくなりました！」）も、フィードに出している間は入れます
+# （2026-11-11 にさくらさんから頼まれました）。data/config.json の images.feed に
+# feed-3.jpg がある間だけです。そこから外せば、ここにも入らなくなります。
+rm -f "$DIR/3枚目.jpg"
+if python3 -c "import json,sys;sys.exit(0 if 'feed-3.jpg' in json.load(open('$TMP/config.json'))['images']['feed'] else 1)" 2>/dev/null; then
+  OUT="$DIR/3枚目.jpg"
+  if ! $GH api -X GET "repos/$REPO/contents/images/feed-3.jpg" \
+       -H "Accept: application/vnd.github.raw" > "$OUT" 2>/dev/null \
+     || [[ $(file -b --mime-type "$OUT") != image/jpeg ]]; then
+    say "$DATE の3枚目（青いポスター）を取ってこられませんでした"
+    rm -f "$OUT"; exit 1
+  fi
+fi
 ( cd "$TMP" && GITHUB_TOKEN=$($GH auth token) GITHUB_REPOSITORY=$REPO \
     python3 "$ROOT/scripts/github_issue.py" approval --draft draft.json >/dev/null 2>&1 )
 CAPTION=$(python3 - "$ROOT/scripts" "$TMP" "$DIR" <<'PYEOF'
@@ -81,9 +95,9 @@ ans=$(osascript - "${DIR:t}" <<'EOF' 2>/dev/null
 on run argv
   display alert "【生バンドカラオケ】Instagram に本日のストーリーが出ました" message "Facebook 用は、こちらです。
 
-デスクトップの「" & (item 1 of argv) & "」に、画像2枚（1枚目 → 2枚目の順）、重ねる文字、文章を入れました。
+デスクトップの「" & (item 1 of argv) & "」に、画像（1枚目 → 2枚目の順。3枚目の青いポスターがあるときはフィード用です）、重ねる文字、文章を入れました。
 
-「開く」を押すと、4つを選んだ状態でフォルダが開き、AirDrop の窓も開きます。選んであるものを、AirDrop の窓の iPhone へドラッグすれば送れます。文章はコピーもしてあります。
+「開く」を押すと、全部を選んだ状態でフォルダが開き、AirDrop の窓も開きます。選んであるものを、AirDrop の窓の iPhone へドラッグすれば送れます。文章はコピーもしてあります。
 
 上げる前に、お店のページ（ミュージックカフェsakura）になっているか見てください。" buttons {"あとで", "開く"} default button "開く"
   return button returned of result
@@ -93,7 +107,7 @@ EOF
 say "知らせました: $DATE（押したボタン: ${ans:-なし}）"
 if [[ $ans == 開く ]]; then
   print -rn -- "$CAPTION" | pbcopy
-  # 4つを選んだ状態で Finder に出します（そのまま AirDrop の窓へドラッグできるように）。
+  # 全部を選んだ状態で Finder に出します（そのまま AirDrop の窓へドラッグできるように）。
   osascript - "$DIR" <<'EOF' >/dev/null 2>&1
 on run argv
   set f to POSIX file (item 1 of argv) as alias
